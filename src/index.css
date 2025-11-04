@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fallback to ensure layout holds even if Tailwind didn't load */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  flex-wrap: nowrap;
+}
+.item-row-left { flex: 1; min-width: 0; }
+.qty-input {
+  width: 96px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  text-align: right;
+}

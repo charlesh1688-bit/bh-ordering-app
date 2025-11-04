@@ -1,8 +1,5 @@
 import React, { useMemo, useState } from "react";
 
-// NOTE: This file is plain React (no TypeScript). Removed TS type annotations to avoid runtime errors.
-
-// --- DATA: Full product map -------------------------------------------------
 const PRODUCT_MAP = {
   "Tapered Internal": [
     { itemNo: "TLX3010", label: "Tapered Internal 3.0 — 10.5mm (TLX3010)" },
@@ -78,108 +75,30 @@ const PRODUCT_MAP = {
   ]
 };
 
-// --- HELPERS ---------------------------------------------------------------
 const CATEGORIES = Object.keys(PRODUCT_MAP);
-function classNames(...xs) {
-  return xs.filter(Boolean).join(" ");
-}
-function getWeekday(dateStr) {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("zh-TW", { weekday: "long" });
-}
+function classNames(...xs) { return xs.filter(Boolean).join(" "); }
+function getWeekday(dateStr) { const d = new Date(dateStr); return isNaN(d) ? "" : d.toLocaleDateString("zh-TW", { weekday: "long" }); }
 
-// --- APP -------------------------------------------------------------------
 export default function App() {
-  // 商品狀態
   const [category, setCategory] = useState(CATEGORIES[0] || "");
   const items = useMemo(() => PRODUCT_MAP[category] || [], [category]);
   const [quantities, setQuantities] = useState({});
-
-  // 日期（最小=今天）
   const today = new Date().toISOString().split("T")[0];
+  const [customer, setCustomer] = useState({ clinic:"", contactName:"", phone:"", address:"", salesRep:"", billTo:"", note:"", deliveryDate: today });
 
-  // 客戶資料
-  const [customer, setCustomer] = useState({
-    clinic: "",
-    contactName: "",
-    phone: "",
-    address: "",
-    salesRep: "",
-    billTo: "",
-    note: "",
-    deliveryDate: today,
-  });
+  const totalQty = useMemo(() => Object.values(quantities).reduce((a, b) => a + (b || 0), 0), [quantities]);
+  const handleQtyChange = (itemNo, val) => setQuantities((q) => ({ ...q, [itemNo]: Math.max(0, Math.floor(Number(val) || 0)) }));
+  const onCust = (k, v) => setCustomer((c) => ({ ...c, [k]: v }));
 
-  const totalQty = useMemo(
-    () => Object.values(quantities).reduce((a, b) => a + (b || 0), 0),
-    [quantities]
-  );
-
-  const handleQtyChange = (itemNo, val) => {
-    const n = Math.max(0, Math.floor(Number(val) || 0));
-    setQuantities((q) => ({ ...q, [itemNo]: n }));
-  };
-
-  const onCust = (key, val) => setCustomer((c) => ({ ...c, [key]: val }));
-
-  const orderLines = useMemo(() => {
-    return CATEGORIES.flatMap((cat) =>
-      (PRODUCT_MAP[cat] || []).map((i) => ({
-        category: cat,
-        itemNo: i.itemNo,
-        label: i.label,
-        qty: quantities[i.itemNo] || 0,
-      }))
-    ).filter((r) => r.qty > 0);
-  }, [quantities]);
+  const orderLines = useMemo(() => CATEGORIES.flatMap((cat) => (PRODUCT_MAP[cat] || []).map((i) => ({ category: cat, itemNo: i.itemNo, label: i.label, qty: quantities[i.itemNo] || 0 }))).filter((r) => r.qty > 0), [quantities]);
 
   const exportCSV = () => {
-    const headers = [
-      "Clinic",
-      "Contact Name",
-      "Phone",
-      "Address",
-      "Sales Rep",
-      "Bill To",
-      "Delivery Date",
-      "Note",
-      "Category",
-      "Item No",
-      "Label",
-      "Quantity",
-    ];
-
-    const cust = [
-      customer.clinic,
-      customer.contactName,
-      customer.phone,
-      customer.address,
-      customer.salesRep,
-      customer.billTo,
-      customer.deliveryDate,
-      customer.note,
-    ];
-
-    const rows = orderLines.map((r) => [
-      ...cust,
-      r.category,
-      r.itemNo,
-      r.label,
-      r.qty,
-    ]);
-
-    const csv = [headers, ...rows]
-      .map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
+    const headers = ["Clinic","Contact Name","Phone","Address","Sales Rep","Bill To","Delivery Date","Note","Category","Item No","Label","Quantity"];
+    const cust = [customer.clinic, customer.contactName, customer.phone, customer.address, customer.salesRep, customer.billTo, customer.deliveryDate, customer.note];
+    const rows = orderLines.map((r) => [...cust, r.category, r.itemNo, r.label, r.qty]);
+    const csv = [headers, ...rows].map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `BH_Implant_Order_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `BH_Implant_Order_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
   };
 
   return (
@@ -190,7 +109,6 @@ export default function App() {
           <div className="text-sm text-gray-600">含到貨日期（不可早於今天，顯示星期幾） / 客戶資料 / 負責業務 / 帳單收件人 / 附註</div>
         </header>
 
-        {/* 客戶資料區塊 */}
         <section className="bg-gray-50 rounded-2xl p-4 shadow-sm border">
           <h2 className="font-semibold mb-3">客戶資料</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -208,26 +126,17 @@ export default function App() {
           <textarea placeholder="附註 (Notes)" value={customer.note} onChange={(e) => onCust("note", e.target.value)} className="mt-3 border rounded-lg w-full px-3 py-2" rows={3} />
         </section>
 
-        {/* 分類選擇 */}
         <section className="bg-gray-50 rounded-2xl p-4 shadow-sm border">
           <label className="block text-sm font-medium mb-2">植體分類</label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={classNames(
-                  "px-3 py-1.5 rounded-full border text-sm",
-                  c === category ? "bg-black text-white border-black" : "bg-white hover:bg-gray-100"
-                )}
-              >
+              <button key={c} onClick={() => setCategory(c)} className={classNames("px-3 py-1.5 rounded-full border text-sm", c === category ? "bg-black text-white border-black" : "bg-white hover:bg-gray-100")}>
                 {c}
               </button>
             ))}
           </div>
         </section>
 
-        {/* 品項與數量 */}
         <section className="bg-gray-50 rounded-2xl p-4 shadow-sm border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">{category} 產品清單</h2>
@@ -236,24 +145,17 @@ export default function App() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {items.map((it) => (
-              <div key={it.itemNo} className="flex items-center gap-3 bg-white rounded-xl border p-3">
-                <div className="flex-1">
+              <div key={it.itemNo} className="item-row">
+                <div className="item-row-left">
                   <div className="font-medium leading-tight">{it.label}</div>
                   <div className="text-xs text-gray-500">Item No: {it.itemNo}</div>
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  className="w-24 px-2 py-1 rounded-lg border text-right"
-                  value={quantities[it.itemNo] || 0}
-                  onChange={(e) => handleQtyChange(it.itemNo, e.target.value)}
-                />
+                <input type="number" min={0} className="qty-input" value={quantities[it.itemNo] || 0} onChange={(e) => handleQtyChange(it.itemNo, e.target.value)} />
               </div>
             ))}
           </div>
         </section>
 
-        {/* 訂單摘要與匯出 */}
         <section className="bg-gray-50 rounded-2xl p-4 shadow-sm border">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold">訂單摘要</h2>
@@ -292,7 +194,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* 提示 */}
         <section className="text-xs text-gray-500">
           <p>若要擴充功能（PDF 匯出、金額估算、搜尋/篩選、常用客戶帶入），告訴我要加什麼，我直接幫你接上。</p>
         </section>
